@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Escansão Poética (Protótipo c/ Léxico + Passo a Passo)</title>
+  <style>
+    :root { --bg:#0b0d12; --card:#121521; --muted:#8fa0b3; --text:#e6ecf3; --accent:#79b8ff; --ok:#3fb950; --warn:#d29922; --info:#58a6ff; --merge:#1f6feb; --del:#f85149; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; background: var(--bg); color: var(--text); }
+    header { padding: 20px; border-bottom: 1px solid #1e2433; background: #0c1018; }
+    h1 { font-size: 20px; margin: 0; letter-spacing: 0.2px; }
+    main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .card { background: var(--card); border: 1px solid #20283a; border-radius: 14px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    .row { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; }
+    textarea, input[type="text"] { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #2a3347; background: #0e1320; color: var(--text); }
+    textarea { resize: vertical; min-height: 90px; }
+    button { background: #101a2b; border: 1px solid #2a3347; color: var(--text); padding: 10px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+    button:hover { border-color: var(--accent); }
+    .muted { color: var(--muted); font-size: 13px; }
+    .monosmall { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid #2a3347; background: #0f1626; margin-right: 6px; margin-bottom: 6px; }
+    .grid { display: grid; gap: 12px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .section-title { font-weight: 700; margin: 14px 0 8px; letter-spacing: .2px; }
+    code { background: #0e1320; border: 1px solid #2a3347; padding: 2px 6px; border-radius: 6px; }
+    .hint { border-left: 3px solid #2a3347; padding-left: 10px; margin: 10px 0; }
+    details { background: #0f1626; border: 1px solid #2a3347; border-radius: 12px; padding: 10px 12px; }
+    summary { cursor: pointer; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid #1e2433; padding: 8px; text-align: left; vertical-align: top; }
+    .tag { border-radius: 6px; padding: 2px 6px; font-size: 12px; border: 1px solid #2a3347; }
+    .tag.merge { background: rgba(31,111,235,.15); border-color: #1f6feb; }
+    .tag.del { background: rgba(248,81,73,.15); border-color: #f85149; }
+    .tag.info { background: rgba(88,166,255,.15); border-color: #58a6ff; }
+    .kbd { border: 1px solid #2a3347; background: #0e1320; border-radius: 6px; padding: 1px 6px; font-family: ui-monospace, monospace; font-size: 12px; }
+    .steps li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Escansão Poética — Protótipo com Léxico + Passo a Passo (Por Gabi Branco) </h1>
+  </header>
+  <main>
+    <div class="row">
+      <section class="card">
+        <label for="texto" class="section-title">Verso/frase</label>
+        <textarea id="texto" placeholder="Ex.: Amor e ódio andavam lado a lado"></textarea>
+        <div style="display:flex; gap:8px; margin-top:10px; align-items:center; flex-wrap:wrap;">
+          <button id="analisar">Analisar</button>
+          <button id="gerarVariacoes">Gerar variações</button>
+          <span class="muted">O passo a passo abaixo evidencia sinérese (interna), elisão e sinalefa (entre palavras).</span>
+        </div>
+        <div class="hint muted" style="margin-top:10px;">
+          <b>Sílabas gramaticais</b> dividem palavras independentemente; <b>sílabas poéticas</b> permitem fusões (<i>sinalefa</i>, <i>elisão</i>, <i>sinérese</i>) e a contagem vai <u>até a sílaba tônica da última palavra</u>.
+        </div>
+      </section>
+        <div class="section-title" style="margin-top:16px;">Classificações alvo</div>
+        <div class="grid grid-2">
+          <div class="pill">5 — redondilha menor</div>
+          <div class="pill">7 — redondilha maior</div>
+          <div class="pill">10 — decassílabo</div>
+          <div class="pill">12 — alexandrino</div>
+        </div>
+        <div class="muted" style="margin-top:8px;">Outras contagens → verso livre.</div>
+      </aside>
+    </div>
+
+    <section class="card" style="margin-top:16px;">
+      <div id="saidaOverview" class="muted">Nenhuma análise ainda.</div>
+      <div id="passos"></div>
+      <div id="variantes"></div>
+      <div id="detalhes"></div>
+    </section>
+
+    <details style="margin-top:12px;">
+      <summary>Metodologia (resumo técnico)</summary>
+      <ul>
+        <li><b>Léxico (opcional):</b> quando disponível, usa tônica e silabação do léxico para a <u>tônica da última palavra</u> e para exibir a silabação "padrão" (não obriga a segmentação do verso).</li>
+        <li><b>Sílabas gramaticais:</b> segmentação por núcleos vocálicos, com ditongos/tritongos comuns.</li>
+        <li><b>Sinérese (interna):</b> fusão heurística de hiatos envolvendo <i>i/u</i> com vogal adjacente; gera variações.</li>
+        <li><b>Entre palavras:</b> <i>elisão</i> (queda de vogal átona final a/e/o) e <i>sinalefa</i> (fusão de vogal final + inicial, h- mudo permitido).</li>
+        <li><b>Contagem poética:</b> total até a sílaba tônica da última palavra (contagem inclusiva). Exibe possíveis contagens quando há ambiguidade.</li>
+      </ul>
+    </details>
+  </main>
+
+  <script>
+    // ========================= Léxico (persistência simples) =========================
+    let USER_LEXICON = {};
+    const MINI_LEXICON = {
+      "amor": { syllables:["a","mor"], stress:1 },
+      "ódio": { syllables:["ó","dio"], stress:0 },
+      "andavam": { syllables:["an","da","vam"], stress:1 },
+      "lado": { syllables:["la","do"], stress:0 },
+      "vida": { syllables:["vi","da"], stress:0 },
+      "eterna": { syllables:["e","ter","na"], stress:1 }
+    };
+
+    function loadLexiconFromStorage(){
+      try{ const raw = localStorage.getItem('pt_lexicon'); USER_LEXICON = raw ? JSON.parse(raw) : {}; }
+      catch(e){ USER_LEXICON = {}; }
+      updateLexiconStatus();
+    }
+    function saveLexiconToStorage(){ localStorage.setItem('pt_lexicon', JSON.stringify(USER_LEXICON)); updateLexiconStatus(); }
+    function updateLexiconStatus(){
+      const n = Object.keys(USER_LEXICON).length;
+      document.getElementById('lexiconStatus').textContent = n>0 ? `${n} entradas carregadas.` : 'Nenhum léxico carregado.';
+    }
+
+    // ========================= Helpers e dados básicos =========================
+    const V = "aeiouáéíóúâêôãõà"; // vogais consideradas
+    const ACENTUADAS = /[áéíóúâêôãõàÁÉÍÓÚÂÊÔÃÕÀ]/;
+    const DITONGOS = [
+      "ai","ei","oi","ui","au","eu","ou","ia","ie","io","iu","ua","ue","uo",
+      "ão","õe","ãi","uai","uau","uei","iau","iao","iei","uou"
+    ];
+
+    function isVowel(ch){ return V.includes((ch||'').toLowerCase()); }
+
+    // Normalização leve (mantém acentos)
+    function normalizeInput(s){
+      return s
+        .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+        .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+        .replace(/[^\p{L}\p{M}\s'’-]/gu, ' ')
+        .replace(/[’’-]/g, '-')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function tokenize(s){ return s.split(/\s+/).filter(Boolean); }
+
+    // Silabação gramatical (heurística por núcleos)
+    function splitSyllablesWord(word){
+      const w = word.toLowerCase();
+      const out = []; let syl = ''; let i = 0;
+      while(i < w.length){
+        const ch = w[i]; syl += word[i];
+        if(isVowel(ch)){
+          // captura tri/ditongo
+          for(let span=3; span>=2; span--){
+            const seg = w.slice(i, i+span);
+            if(DITONGOS.includes(seg)){
+              syl = syl.slice(0, syl.length - 1) + word.slice(i, i+span);
+              i += (span-1); break;
+            }
+          }
+          out.push(syl); syl = '';
+        }
+        i++;
+      }
+      if(syl) out.push(syl);
+      // pós-ajuste simples: junta resíduos consonantais
+      const fix = [];
+      for(let j=0;j<out.length;j++){
+        const s = out[j];
+        if(![...s].some(isVowel) && fix.length){ fix[fix.length-1] += s; }
+        else { fix.push(s); }
+      }
+      return fix.filter(Boolean);
+    }
+
+    // Tônica: usa léxico se disponível; senão heurística
+    function stressedSyllableIndex(word, syllables){
+      const low = word.toLowerCase();
+      const lex = USER_LEXICON[low] || MINI_LEXICON[low];
+      if(lex && Number.isInteger(lex.stress)){
+        return { idx: Math.min(Math.max(0, lex.stress), (lex.syllables||syllables).length-1), source: 'léxico' };
+      }
+      // Heurística: acento gráfico prioriza
+      for(let i=0;i<syllables.length;i++) if(ACENTUADAS.test(syllables[i])) return { idx:i, source:'heurística (acento gráfico)' };
+      if(/(a|e|o|as|es|os|em|ens)$/.test(low)) return { idx: Math.max(0, syllables.length-2), source:'heurística (paroxítona)' };
+      return { idx: Math.max(0, syllables.length-1), source:'heurística (oxítona)' };
+    }
+
+    // Sinérese: gera base + variações de uma fusão interna possível por palavra; registra evento
+    function synizesisVariants(word, syllables){
+      const base = { syls: syllables.slice(), events: [] };
+      const variants = [base];
+      for(let k=0;k<syllables.length-1;k++){
+        const end = syllables[k].slice(-1).toLowerCase();
+        const nextStart = syllables[k+1][0].toLowerCase();
+        const cond1 = (end==='i' || end==='u') && isVowel(nextStart);
+        const cond2 = isVowel(end) && (nextStart==='i' || nextStart==='u');
+        if(cond1 || cond2){
+          const merged = syllables.slice();
+          const a = syllables[k], b = syllables[k+1];
+          merged.splice(k, 2, a + b);
+          variants.push({ syls: merged, events: [{ type:'sinérese', a, b, res: a+b, at:k }] });
+        }
+      }
+      return variants;
+    }
+
+    // Sinalefa: une vogal final de palavra com vogal inicial da seguinte (h- mudo permitido)
+    function applySinalefaAcrossWords(wordsSyls){
+      const res = []; const events = [];
+      for(let i=0;i<wordsSyls.length;i++){
+        const curr = wordsSyls[i].slice();
+        if(res.length===0){ res.push(curr); continue; }
+        const prev = res[res.length-1];
+        const lastPrev = prev[prev.length-1];
+        const firstCurr = curr[0];
+        const lastCh = (lastPrev||'').slice(-1).toLowerCase();
+        const f0 = (firstCurr||'')[0]?.toLowerCase()||'';
+        const f1 = (firstCurr||'')[1]?.toLowerCase()||'';
+        const startsWithV = isVowel(f0) || (f0==='h' && isVowel(f1));
+        if(isVowel(lastCh) && startsWithV){
+          const merged = lastPrev + (f0==='h' ? firstCurr.slice(1) : firstCurr);
+          events.push({ type:'sinalefa', left:lastPrev, right:firstCurr, res: merged });
+          prev[prev.length-1] = merged;
+          const rest = curr.slice(1); if(rest.length) res.push(rest);
+        } else {
+          res.push(curr);
+        }
+      }
+      return { wordsSyls: res, events };
+    }
+
+    // Elisão: elimina vogal átona final (a/e/o) da palavra anterior se próxima inicia por vogal/h
+    function applyElisionAcrossWords(wordsSyls){
+      const res = []; const events = [];
+      for(let i=0;i<wordsSyls.length;i++){
+        const curr = wordsSyls[i].slice();
+        if(res.length===0){ res.push(curr); continue; }
+        const prev = res[res.length-1];
+        const lastPrev = prev[prev.length-1];
+        const firstCurr = curr[0];
+        const lastCh = (lastPrev||'').slice(-1).toLowerCase();
+        const f0 = (firstCurr||'')[0]?.toLowerCase()||'';
+        const f1 = (firstCurr||'')[1]?.toLowerCase()||'';
+        const startsWithV = isVowel(f0) || (f0==='h' && isVowel(f1));
+        const isMonovowelAtonic = /^[^aeiouáéíóúâêôãõà]*[aeo]$/i.test(lastPrev) && !ACENTUADAS.test(lastPrev);
+        if(startsWithV && isMonovowelAtonic){
+          events.push({ type:'elisão', drop:lastPrev, next:firstCurr });
+          prev.pop(); // remove sílaba final átona
+          res[res.length-1] = prev;
+          res.push(curr);
+        } else {
+          res.push(curr);
+        }
+      }
+      return { wordsSyls: res, events };
+    }
+
+    // Produto cartesiano
+    function cartesianProduct(arrays){
+      return arrays.reduce((acc, curr) => acc.flatMap(a => curr.map(c => a.concat([c]))), [[]]);
+    }
+
+    function flatten(arr){ return arr.flat(); }
+
+    // Classificação métrica
+    function classify(n){
+      if(n===5) return "redondilha menor (5)";
+      if(n===7) return "redondilha maior (7)";
+      if(n===10) return "decassílabo (10)";
+      if(n===12) return "alexandrino (12)";
+      return "verso livre";
+    }
+
+    // ========================= Construção (análise única, passo a passo) =========================
+    function analyzeStepByStep(text){
+      const words = tokenize(text);
+      const grams = words.map(w => splitSyllablesWord(w));
+      const perWordSyn = words.map((w, i) => synizesisVariants(w, grams[i]));
+      // para o passo a passo, escolha a variante "base" (sem sinérese) inicialmente
+      const baseChoice = perWordSyn.map(list => list[0]);
+
+      // Eventos de sinérese internos (baseChoice.events vazio)
+      const sinereseEvents = baseChoice.flatMap(x => x.events || []);
+
+      // Entre palavras: primeiro elisão, depois sinalefa (ordem comum em análises)
+      const afterEl = applyElisionAcrossWords(baseChoice.map(x => x.syls.slice()));
+      const afterSi = applySinalefaAcrossWords(afterEl.wordsSyls.map(x => x.slice()));
+
+      const linearBefore = flatten(baseChoice.map(x => x.syls));
+      const linearAfterEl = flatten(afterEl.wordsSyls);
+      const linearAfterSi = flatten(afterSi.wordsSyls);
+
+      // Tônica da última palavra: tenta léxico, senão heurística
+      const lastWord = words[words.length-1];
+      const lastSyls = baseChoice[baseChoice.length-1].syls; // sem sinérese interna para o passo a passo
+      const stressInfoLexOrHeu = stressedSyllableIndex(lastWord, lastSyls);
+
+      // contagem: até a tônica da última palavra após fusões entre palavras (consideramos sequência final após elisão+sinalefa)
+      const lenLast = lastSyls.length; // usamos a segmentação de baseChoice para indexar a tônica
+      const startIndex = Math.max(0, linearAfterSi.length - lenLast);
+      const poeticCount = startIndex + stressInfoLexOrHeu.idx + 1;
+
+      return {
+        words, grams,
+        baseChoice, sinereseEvents,
+        afterEl, afterSi,
+        sequences: { linearBefore, linearAfterEl, linearAfterSi },
+        stress: stressInfoLexOrHeu,
+        counts: { poeticCount }
+      };
+    }
+
+    // ========================= Variações (todas combinações plausíveis) =========================
+    function buildVariants(text){
+      const words = tokenize(text);
+      const grams = words.map(w => splitSyllablesWord(w));
+      const perWordSyn = words.map((w, i) => synizesisVariants(w, grams[i]));
+      const synCombos = cartesianProduct(perWordSyn);
+
+      const variants = [];
+      for(const combo of synCombos){
+        const baseWords = combo.map(o => o.syls.slice());
+        // i) sem fusão
+        variants.push(enrichVariant(words, grams, baseWords, combo, '(i) sem fusão'));
+        // ii) sinalefa
+        variants.push(enrichVariant(words, grams, applySinalefaAcrossWords(baseWords.map(x=>x.slice())).wordsSyls, combo, '(ii) sinalefa'));
+        // iii) elisão
+        variants.push(enrichVariant(words, grams, applyElisionAcrossWords(baseWords.map(x=>x.slice())).wordsSyls, combo, '(iii) elisão'));
+        // iv) elisão + sinalefa
+        const el = applyElisionAcrossWords(baseWords.map(x=>x.slice()));
+        const si = applySinalefaAcrossWords(el.wordsSyls.map(x=>x.slice()));
+        variants.push(enrichVariant(words, grams, si.wordsSyls, combo, '(iv) elisão + sinalefa'));
+      }
+
+      // deduplicar por contagem + sequência
+      const seen = new Set(); const uniq = [];
+      for(const v of variants){
+        const key = v.poeticCount + '|' + v.linearSyls.join('/');
+        if(!seen.has(key)){ seen.add(key); uniq.push(v); }
+      }
+      uniq.sort((a,b)=> a.poeticCount - b.poeticCount);
+      return { words, grams, variants: uniq };
+    }
+
+    function enrichVariant(words, grams, wordsSyls, combo, policy){
+      const linear = flatten(wordsSyls);
+      // última palavra
+      const lastWord = words[words.length-1];
+      const lastSyls = combo[combo.length-1].syls; // sinérese interna aplicada conforme combo
+      const stressInfo = stressedSyllableIndex(lastWord, lastSyls);
+      const startIndex = Math.max(0, linear.length - lastSyls.length);
+      const poeticCount = startIndex + stressInfo.idx + 1;
+      return {
+        policy,
+        wordsSyls,
+        linearSyls: linear,
+        grams,
+        lastWord,
+        lastWordSyls: lastSyls,
+        stressInfo,
+        poeticCount
+      };
+    }
+
+    // ========================= Renderização =========================
+    const $ = sel => document.querySelector(sel);
+
+    function renderOverview(text, words, grams, countsOrVariantList){
+      const gramCount = grams.reduce((acc, g) => acc + g.length, 0);
+      const poeticCounts = Array.isArray(countsOrVariantList)
+        ? [...new Set(countsOrVariantList.map(v => v.poeticCount))].join(', ')
+        : countsOrVariantList.poeticCount;
+      document.getElementById("saidaOverview").innerHTML = `
+        <div class="section-title">Resumo</div>
+        <table>
+          <tr><th>Entrada</th><td>${text}</td></tr>
+          <tr><th>Sílabas gramaticais (total)</th><td>${gramCount}</td></tr>
+          <tr><th>Contagem poética${Array.isArray(countsOrVariantList)?'s possíveis':''}</th><td>${poeticCounts || '—'}</td></tr>
+        </table>`;
+    }
+
+    function renderSteps(result){
+      const { words, grams, baseChoice, sinereseEvents, afterEl, afterSi, sequences, stress, counts } = result;
+      const gramTable = words.map((w,i)=>`<tr><td><b>${w}</b></td><td>${grams[i].map(s=>`<code>${s}</code>`).join(' · ')}</td><td>${grams[i].length}</td></tr>`).join('');
+
+      const sinereseList = baseChoice.map((bw, i) => {
+        const evs = bw.events || []; if(evs.length===0) return '';
+        return evs.map(ev => `<li><span class="tag merge">sinérese</span> na palavra <b>${words[i]}</b>: <code>${ev.a}</code> + <code>${ev.b}</code> → <code>${ev.res}</code></li>`).join('');
+      }).join('');
+
+      const elisaoList = (afterEl.events||[]).map(ev => `<li><span class="tag del">elisão</span>: queda de <code>${ev.drop}</code> antes de <code>${ev.next}</code></li>`).join('');
+      const sinalefaList = (afterSi.events||[]).map(ev => `<li><span class="tag merge">sinalefa</span>: <code>${ev.left}</code> + <code>${ev.right}</code> → <code>${ev.res}</code></li>`).join('');
+
+      const lastWordSylsHtml = baseChoice[baseChoice.length-1].syls.map((s,j)=> j===stress.idx ? `<b><code>${s}</code></b>` : `<code>${s}</code>`).join(' · ');
+
+      document.getElementById("passos").innerHTML = `
+        <div class="section-title">Passo a passo</div>
+        <ol class="steps">
+          <li>
+            <div><b>1) Silabação gramatical (por palavra)</b></div>
+            <table style="margin-top:6px;"><tr><th>Palavra</th><th>Sílabas</th><th>Total</th></tr>${gramTable}</table>
+          </li>
+          <li>
+            <div><b>2) Sequência básica (sem fusões internas)</b></div>
+            <div class="monosmall" style="margin-top:6px;">${sequences.linearBefore.map(s=>`<code>${s}</code>`).join(' · ')}</div>
+            ${sinereseList?`<ul style="margin-top:6px;">${sinereseList}</ul>`:''}
+          </li>
+          <li>
+            <div><b>3) Aplicar elisão (entre palavras)</b></div>
+            ${elisaoList?`<ul style="margin-top:6px;">${elisaoList}</ul>`:'<div class="muted">Nenhuma elisão aplicada.</div>'}
+            <div class="monosmall" style="margin-top:6px;">${sequences.linearAfterEl.map(s=>`<code>${s}</code>`).join(' · ')}</div>
+          </li>
+          <li>
+            <div><b>4) Aplicar sinalefa (entre palavras)</b></div>
+            ${sinalefaList?`<ul style="margin-top:6px;">${sinalefaList}</ul>`:'<div class="muted">Nenhuma sinalefa aplicada.</div>'}
+            <div class="monosmall" style="margin-top:6px;">${sequences.linearAfterSi.map(s=>`<code>${s}</code>`).join(' · ')}</div>
+          </li>
+          <li>
+            <div><b>5) Tônica da última palavra</b> (${stress.source})</div>
+            <div>Última palavra: <b>${words[words.length-1]}</b> → ${lastWordSylsHtml}</div>
+          </li>
+          <li>
+            <div><b>6) Contagem até a última tônica</b></div>
+            <div>Resultado: <b>${counts.poeticCount}</b> sílabas poéticas [${classify(counts.poeticCount)}]</div>
+          </li>
+        </ol>`;
+    }
+
+    function renderVariants(vdata){
+      const { words, grams, variants } = vdata;
+      const list = variants.map((v, idx)=>{
+        return `<div class="card" style="margin-top:12px;">
+          <div><b>Variante ${idx+1}</b> — ${v.policy}: <b>${v.poeticCount}</b> sílabas poéticas [${classify(v.poeticCount)}]</div>
+          <div class="muted monosmall" style="margin-top:6px;">${v.linearSyls.map(s=>`<code>${s}</code>`).join(' · ')}</div>
+          <div class="muted" style="margin-top:6px;">Última palavra <b>${v.lastWord}</b> (${v.stressInfo.source}); tônica em <code>${v.lastWordSyls[v.stressInfo.idx]}</code>.</div>
+        </div>`;
+      }).join('');
+      document.getElementById("variantes").innerHTML = `<div class="section-title">Variações possíveis</div>${list || '<div class="muted">Sem variantes encontradas.</div>'}`;
+    }
+
+    // ========================= Orquestração =========================
+    function analyze(){
+      const raw = normalizeInput(document.querySelector('#texto').value);
+      if(!raw){
+        document.getElementById('saidaOverview').innerHTML = '<span class="muted">Forneça um verso/frase.</span>';
+        document.getElementById('passos').innerHTML = '';
+        document.getElementById('variantes').innerHTML = '';
+        document.getElementById('detalhes').innerHTML = '';
+        return;
+      }
+      const step = analyzeStepByStep(raw);
+      renderOverview(raw, step.words, step.grams, step.counts);
+      renderSteps(step);
+      document.getElementById('variantes').innerHTML = '';
+      document.getElementById('detalhes').innerHTML = '';
+    }
+
+    function generateAll(){
+      const raw = normalizeInput(document.querySelector('#texto').value);
+      if(!raw){ document.getElementById('variantes').innerHTML = ''; return; }
+      const vdata = buildVariants(raw);
+      renderOverview(raw, vdata.words, vdata.grams, vdata.variants);
+      renderVariants(vdata);
+      document.getElementById('passos').innerHTML = '';
+      document.getElementById('detalhes').innerHTML = '';
+    }
+
+    // Eventos UI
+    document.getElementById('analisar').addEventListener('click', analyze);
+    document.getElementById('gerarVariacoes').addEventListener('click', generateAll);
+
+    document.getElementById('btnLoadLexicon').addEventListener('click', () => {
+      try{
+        const user = JSON.parse(document.getElementById('lexiconText').value || '{}');
+        USER_LEXICON = user; saveLexiconToStorage();
+      } catch(e){ alert('JSON inválido no léxico.'); }
+    });
+    document.getElementById('btnClearLexicon').addEventListener('click', () => {
+      USER_LEXICON = {}; saveLexiconToStorage(); document.getElementById('lexiconText').value='';
+    });
+
+    loadLexiconFromStorage();
+    document.getElementById('texto').value = 'Amor e ódio andavam lado a lado';
+  </script>
+</body>
+</html>
